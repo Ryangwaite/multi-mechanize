@@ -41,13 +41,14 @@ def load_script(script_file):
 
 class UserGroup(multiprocessing.Process):
     def __init__(self, queue, process_num, user_group_name, num_threads,
-                 script_file, run_time, rampup):
+                 script_file, run_args, run_time, rampup):
         multiprocessing.Process.__init__(self)
         self.queue = queue
         self.process_num = process_num
         self.user_group_name = user_group_name
         self.num_threads = num_threads
         self.script_file = script_file
+        self.run_args = run_args
         self.run_time = run_time
         self.rampup = rampup
         self.start_time = time.time()
@@ -63,7 +64,7 @@ class UserGroup(multiprocessing.Process):
             agent_thread = Agent(self.queue, self.process_num, i,
                                  self.start_time, self.run_time,
                                  self.user_group_name,
-                                 script_module, self.script_file)
+                                 script_module, self.script_file, self.run_args)
             agent_thread.daemon = True
             threads.append(agent_thread)
             agent_thread.start()
@@ -74,7 +75,7 @@ class UserGroup(multiprocessing.Process):
 
 class Agent(threading.Thread):
     def __init__(self, queue, process_num, thread_num, start_time, run_time,
-                 user_group_name, script_module, script_file):
+                 user_group_name, script_module, script_file, run_args):
         threading.Thread.__init__(self)
         self.queue = queue
         self.process_num = process_num
@@ -84,6 +85,7 @@ class Agent(threading.Thread):
         self.user_group_name = user_group_name
         self.script_module = script_module
         self.script_file   = script_file
+        self.run_args = run_args
 
         # choose most accurate timer to use (time.clock has finer granularity
         # than time.time on windows, but shouldn't be used on other systems).
@@ -107,7 +109,7 @@ class Agent(threading.Thread):
             start = self.default_timer()
 
             try:
-                trans.run()
+                trans.run(self.run_args)
             except Exception, e:  # test runner catches all script exceptions here
                 error = str(e).replace(',', '')
 
